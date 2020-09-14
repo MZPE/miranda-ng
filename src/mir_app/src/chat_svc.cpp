@@ -412,7 +412,7 @@ static BOOL AddEventToAllMatchingUID(GCEVENT *gce)
 
 		bManyFix++;
 		if ((gce->dwFlags & GCEF_ADDTOLOG) && g_Settings->bLoggingEnabled)
-			g_chatApi.LogToFile(si, gce);
+			LogToFile(si, gce);
 	}
 
 	return 0;
@@ -556,7 +556,7 @@ static INT_PTR CALLBACK sttEventStub(void *_param)
 				g_chatApi.DoSoundsFlashPopupTrayStuff(si, &gce, bIsHighlighted, 0);
 
 			if ((gce.dwFlags & GCEF_ADDTOLOG) && g_Settings->bLoggingEnabled)
-				g_chatApi.LogToFile(si, &gce);
+				LogToFile(si, &gce);
 		}
 
 		if (!bRemoveFlag)
@@ -846,13 +846,13 @@ static int ModulesLoaded(WPARAM, LPARAM)
 
 	mi.position = 2;
 	mi.hIcolibItem = Skin_GetIconHandle(SKINICON_OTHER_OFF);
-	mi.name.a = LPGEN("Mute");
+	mi.name.a = LPGEN("Always");
 	hMute1MenuItem = Menu_AddContactMenuItem(&mi);
 	Menu_ConfigureItem(hMute1MenuItem, MCI_OPT_EXECPARAM, INT_PTR(CHATMODE_MUTE));
 
 	mi.position = 3;
 	mi.hIcolibItem = Skin_GetIconHandle(SKINICON_OTHER_ON);
-	mi.name.a = LPGEN("Unmute");
+	mi.name.a = LPGEN("Never");
 	hMute2MenuItem = Menu_AddContactMenuItem(&mi);
 	Menu_ConfigureItem(hMute2MenuItem, MCI_OPT_EXECPARAM, INT_PTR(CHATMODE_UNMUTE));
 

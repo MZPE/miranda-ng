@@ -152,6 +152,22 @@ void FacebookProto::OnShutdown()
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
+MCONTACT FacebookProto::AddToList(int, PROTOSEARCHRESULT *psr)
+{
+	if (!mir_wstrlen(psr->id.w))
+		return 0;
+
+	if (auto *pUser = FindUser(_wtoi64(psr->id.w)))
+		return pUser->hContact;
+
+	MCONTACT hContact = db_add_contact();
+	Proto_AddToContact(hContact, m_szModuleName);
+	setWString(hContact, DBKEY_ID, psr->id.w);
+	return hContact;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
 INT_PTR FacebookProto::GetCaps(int type, MCONTACT)
 {
 	switch (type) {
