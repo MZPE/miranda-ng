@@ -199,7 +199,7 @@ BEGIN
     LTEXT           "Do you want to allow this change?",IDC_STATIC,5,71,177,8
     CONTROL         "&Allow all further changes to this section",IDC_WARNNOMORE,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,80,169,10
-    DEFPUSHBUTTON   "&Yes",IDYES,5,94,50,14
+    DEFPUSHBUTTON   "&Yes",IDOK,5,94,50,14
     PUSHBUTTON      "&No",IDNO,59,94,50,14
     PUSHBUTTON      "Cancel import",IDCANCEL,123,94,59,14
 END
@@ -229,17 +229,19 @@ BEGIN
     GROUPBOX        "Show",IDC_STATIC,6,2,302,118
     CONTROL         "Tree1",IDC_FILTER,"SysTreeView32",TVS_DISABLEDRAGDROP | TVS_NOTOOLTIPS | TVS_NONEVENHEIGHT | WS_BORDER | WS_HSCROLL | WS_TABSTOP,14,13,160,81
     CONTROL         "Received bytes",IDC_DUMPRECV,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,13,122,10
-    CONTROL         "Sent bytes",IDC_DUMPSENT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,26,122,10
+    CONTROL         "Sent bytes",IDC_DUMPSENT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,25,122,10
     CONTROL         "Additional data due to proxy communication",IDC_DUMPPROXY,
-                    "Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | WS_TABSTOP,181,39,122,18
-    CONTROL         "SSL traffic",IDC_DUMPSSL,"Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | WS_TABSTOP,181,56,122,10
-    CONTROL         "Text dumps where available",IDC_TEXTDUMPS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,69,122,10
-    CONTROL         "Auto-detect text",IDC_AUTODETECTTEXT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,83,122,10
-    CONTROL         "Calling modules' names",IDC_SHOWNAMES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,96,122,10
+                    "Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | WS_TABSTOP,181,37,122,18
+    CONTROL         "SSL traffic",IDC_DUMPSSL,"Button",BS_AUTOCHECKBOX | BS_TOP | BS_MULTILINE | WS_TABSTOP,181,54,122,10
+    CONTROL         "Text dumps where available",IDC_TEXTDUMPS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,66,122,10
+    CONTROL         "Auto-detect text",IDC_AUTODETECTTEXT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,79,122,10
+    CONTROL         "Calling modules' names",IDC_SHOWNAMES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,91,122,10
+    CONTROL         "Print dates",IDC_SHOWDATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,181,104,122,10
     COMBOBOX        IDC_TIMEFORMAT,14,100,160,69,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     GROUPBOX        "Log to",IDC_STATIC,6,122,302,66
     CONTROL         "OutputDebugString()",IDC_TOOUTPUTDEBUGSTRING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,132,122,10
     CONTROL         "File",IDC_TOFILE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,146,44,10
+    CONTROL         "Rotate logs",IDC_LOGROTATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,147,146,153,10
     EDITTEXT        IDC_FILENAME,14,159,270,12,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_FILENAMEBROWSE,288,159,15,12
     LTEXT           "",IDC_PATH,14,174,294,10
@@ -1321,6 +1323,7 @@ IDI_PASSWORD            ICON                    "icon_password.ico"
 
 IDI_SOUND               ICON                    "sound.ico"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Cursor
@@ -1486,6 +1489,11 @@ BEGIN
 END
 
 IDD_OPT_SOUND AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_NETLIBLOGOPTS AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
