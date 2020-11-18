@@ -26,16 +26,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /////////////////////////////////////////////////////////////////////////////////////////
 // constructor & destructor
 
-CDbxMDBX::CDbxMDBX(const TCHAR *tszFileName, int iMode) :
-	m_safetyMode(true),
+CDbxMDBX::CDbxMDBX(const wchar_t *tszFileName, int iMode) :
 	m_bReadOnly((iMode & DBMODE_READONLY) != 0),
-	m_bShared((iMode & DBMODE_SHARED) != 0),
-	m_maxContactId(0),
+	m_pwszProfileName(mir_wstrdup(tszFileName)),
 	m_impl(*this)
 {
 	m_ccDummy.nSubs = -1;
-
-	m_tszProfileName = mir_wstrdup(tszFileName);
 }
 
 CDbxMDBX::~CDbxMDBX()
@@ -51,15 +47,13 @@ CDbxMDBX::~CDbxMDBX()
 
 	if (m_crypto)
 		m_crypto->destroy();
-
-	mir_free(m_tszProfileName);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
 int CDbxMDBX::Load()
 {
-	unsigned int defFlags = MDBX_CREATE;
+	MDBX_db_flags_t defFlags = MDBX_CREATE;
 	{
 		txn_ptr trnlck(StartTran());
 		if (trnlck == nullptr) {
@@ -96,7 +90,7 @@ int CDbxMDBX::Load()
 			m_header.dwSignature = DBHEADER_SIGNATURE;
 			m_header.dwVersion = DBHEADER_VERSION;
 			data.iov_base = &m_header; data.iov_len = sizeof(m_header);
-			mdbx_put(trnlck, m_dbGlobal, &key, &data, 0);
+			mdbx_put(trnlck, m_dbGlobal, &key, &data, MDBX_UPSERT);
 			DBFlush();
 		}
 
@@ -104,10 +98,10 @@ int CDbxMDBX::Load()
 		if (mdbx_get(trnlck, m_dbGlobal, &key, &data) == MDBX_SUCCESS)
 			m_ccDummy.dbc = *(const DBContact*)data.iov_base;
 
-		trnlck.commit();
+		trnlck.Commit();
 	}
 
-	mdbx_txn_begin(m_env, nullptr, MDBX_RDONLY, &m_txn_ro);
+	mdbx_txn_begin(m_env, nullptr, MDBX_TXN_RDONLY, &m_txn_ro);
 	mdbx_cursor_open(m_txn_ro, m_dbEvents, &m_curEvents);
 	mdbx_cursor_open(m_txn_ro, m_dbEventIds, &m_curEventIds);
 	mdbx_cursor_open(m_txn_ro, m_dbEventsSort, &m_curEventsSort);
@@ -138,7 +132,7 @@ BYTE bDefHeader[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 int CDbxMDBX::Check(void)
 {
-	FILE *pFile = _wfopen(m_tszProfileName, L"rb");
+	FILE *pFile = _wfopen(m_pwszProfileName, L"rb");
 	if (pFile == nullptr)
 		return EGROKPRF_CANTREAD;
 
@@ -156,7 +150,7 @@ int CDbxMDBX::Check(void)
 
 BOOL CDbxMDBX::Compact()
 {
-	CMStringW wszTmpFile(FORMAT, L"%s.tmp", m_tszProfileName);
+	CMStringW wszTmpFile(FORMAT, L"%s.tmp", m_pwszProfileName.get());
 
 	mir_cslock lck(m_csDbAccess);
 	int res = Backup(wszTmpFile);
@@ -165,8 +159,8 @@ BOOL CDbxMDBX::Compact()
 
 	mdbx_env_close(m_env);
 
-	DeleteFileW(m_tszProfileName);
-	MoveFileW(wszTmpFile, m_tszProfileName);
+	DeleteFileW(m_pwszProfileName);
+	MoveFileW(wszTmpFile, m_pwszProfileName);
 
 	Map();
 	Load();
@@ -218,7 +212,7 @@ void CDbxMDBX::SetCacheSafetyMode(BOOL bIsSet)
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-static void assert_func(const MDBX_env*, const char *msg, const char *function, unsigned line)
+static void assert_func(const MDBX_env*, const char *msg, const char *function, unsigned line) MDBX_CXX17_NOEXCEPT
 {
 	Netlib_Logf(nullptr, "MDBX: assertion failed (%s, %d): %s", function, line, msg);
 
@@ -229,7 +223,7 @@ static void assert_func(const MDBX_env*, const char *msg, const char *function, 
 
 int CDbxMDBX::Map()
 {
-	if (!LockName(m_tszProfileName))
+	if (!LockName(m_pwszProfileName))
 		return EGROKPRF_CANTREAD;
 
 	mdbx_env_create(&m_env);
@@ -255,11 +249,11 @@ int CDbxMDBX::Map()
 	if (rc != MDBX_SUCCESS)
 		return EGROKPRF_CANTREAD;
 
-	unsigned int mode = MDBX_NOSUBDIR | MDBX_MAPASYNC | MDBX_WRITEMAP | MDBX_SAFE_NOSYNC | MDBX_COALESCE | MDBX_EXCLUSIVE;
+	MDBX_env_flags_t mode = MDBX_NOSUBDIR | MDBX_MAPASYNC | MDBX_WRITEMAP | MDBX_SAFE_NOSYNC | MDBX_COALESCE | MDBX_EXCLUSIVE;
 	if (m_bReadOnly)
 		mode |= MDBX_RDONLY;
 
-	if (mdbx_env_open(m_env, _T2A(m_tszProfileName), mode, 0664) != MDBX_SUCCESS)
+	if (mdbx_env_open(m_env, _T2A(m_pwszProfileName), mode, 0664) != MDBX_SUCCESS)
 		return EGROKPRF_CANTREAD;
 
 	return EGROKPRF_NOERROR;
@@ -275,7 +269,7 @@ void CDbxMDBX::TouchFile()
 	FILETIME ft;
 	SystemTimeToFileTime(&st, &ft);
 
-	HANDLE hFile = CreateFileW(m_tszProfileName, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE hFile = CreateFileW(m_pwszProfileName, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE) {
 		SetFileTime(hFile, nullptr, &ft, &ft);
 		CloseHandle(hFile);

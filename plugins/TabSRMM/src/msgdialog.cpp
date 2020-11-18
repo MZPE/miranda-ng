@@ -1000,13 +1000,13 @@ void CMsgDialog::onClick_Filter(CCtrlButton *pButton)
 
 	m_btnFilter.SendMsg(BUTTONSETOVERLAYICON, (LPARAM)(m_bFilterEnabled ? PluginConfig.g_iconOverlayEnabled : PluginConfig.g_iconOverlayDisabled), 0);
 
-	if (m_bFilterEnabled && db_get_b(0, CHAT_MODULE, "RightClickFilter", 1) == 0) {
+	if (m_bFilterEnabled && !g_chatApi.bRightClickFilter) 
 		ShowFilterMenu();
-		return;
+	else {
+		RedrawLog();
+		UpdateTitle();
+		db_set_b(m_si->hContact, CHAT_MODULE, "FilterEnabled", m_bFilterEnabled);
 	}
-	RedrawLog();
-	UpdateTitle();
-	db_set_b(m_si->hContact, CHAT_MODULE, "FilterEnabled", m_bFilterEnabled);
 }
 
 void CMsgDialog::onClick_ShowNickList(CCtrlButton *pButton)
@@ -1403,6 +1403,9 @@ int CMsgDialog::OnFilter(MSGFILTER *pFilter)
 			return _dlgReturn(m_hwnd, 1);
 		case TABSRMM_HK_QUOTEMSG:
 			SendMessage(m_hwnd, WM_COMMAND, IDC_QUOTE, 0);
+			return _dlgReturn(m_hwnd, 1);
+		case TABSRMM_HK_CLEARMSG:
+			m_message.SetText(L"");
 			return _dlgReturn(m_hwnd, 1);
 		case TABSRMM_HK_USERMENU:
 			SendMessage(m_hwnd, WM_COMMAND, IDC_PROTOCOL, 0);
@@ -1889,15 +1892,6 @@ LRESULT CMsgDialog::WndProc_Message(UINT msg, WPARAM wParam, LPARAM lParam)
 
 		if (!isAlt && !isCtrl && !m_pContainer->m_flags.m_bNoSound && wParam != VK_ESCAPE && !(wParam == VK_TAB && PluginConfig.m_bAllowTab))
 			Skin_PlaySound("SoundOnTyping");
-
-		if (isCtrl && !isAlt) {
-			switch (wParam) {
-			case 0x0b:
-				if (!isChat())
-					m_message.SetText(L"");
-				return 0;
-			}
-		}
 		break;
 
 	case WM_MOUSEWHEEL:
@@ -1924,6 +1918,8 @@ LRESULT CMsgDialog::WndProc_Message(UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 			else if (hClip = GetClipboardData(CF_BITMAP))
 				SendHBitmapAsFile((HBITMAP)hClip);
+			else if (hClip = GetClipboardData(CF_HDROP))
+				SendMessage(m_hwnd, WM_DROPFILES, WPARAM(hClip), 0);
 
 			CloseClipboard();
 		}

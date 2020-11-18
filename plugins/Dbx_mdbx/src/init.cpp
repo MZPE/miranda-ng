@@ -51,7 +51,7 @@ extern "C" __declspec(dllexport) const MUUID MirandaInterfaces[] = { MIID_DATABA
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-static void logger(int type, const char *function, int line, const char *msg, va_list args)
+static void logger(MDBX_log_level_t type, const char *function, int line, const char *msg, va_list args) MDBX_CXX17_NOEXCEPT
 {
 	char tmp[4096];
 	_vsnprintf_s(tmp, _countof(tmp), msg, args);
@@ -61,21 +61,21 @@ static void logger(int type, const char *function, int line, const char *msg, va
 /////////////////////////////////////////////////////////////////////////////////////////
 
 // returns 0 if the profile is created, EMKPRF*
-static int makeDatabase(const TCHAR *profile)
+static int makeDatabase(const wchar_t *profile)
 {
 	std::unique_ptr<CDbxMDBX> db(new CDbxMDBX(profile, 0));
 	return db->Map();
 }
 
 // returns 0 if the given profile has a valid header
-static int grokHeader(const TCHAR *profile)
+static int grokHeader(const wchar_t *profile)
 {
 	std::unique_ptr<CDbxMDBX> db(new CDbxMDBX(profile, DBMODE_SHARED | DBMODE_READONLY));
 	return db->Check();
 }
 
 // returns 0 if all the APIs are injected otherwise, 1
-static MDatabaseCommon* loadDatabase(const TCHAR *profile, BOOL bReadOnly)
+static MDatabaseCommon* loadDatabase(const wchar_t *profile, BOOL bReadOnly)
 {
 	std::unique_ptr<CDbxMDBX> db(new CDbxMDBX(profile, (bReadOnly) ? DBMODE_READONLY : 0));
 	if (db->Map() != ERROR_SUCCESS)
@@ -99,7 +99,7 @@ static DATABASELINK dblink =
 
 int CMPlugin::Load()
 {
-	mdbx_setup_debug(MDBX_DBG_ASSERT, MDBX_LOG_WARN, &logger);
+	mdbx_setup_debug(MDBX_LOG_WARN, MDBX_DBG_ASSERT, &logger);
 	RegisterDatabasePlugin(&dblink);
 	return 0;
 }

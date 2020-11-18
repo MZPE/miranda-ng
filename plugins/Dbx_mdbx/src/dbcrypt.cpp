@@ -103,14 +103,14 @@ CRYPTO_PROVIDER* CDbxMDBX::SelectProvider()
 	{
 		txn_ptr trnlck(StartTran());
 		MDBX_val key = { DBKey_Crypto_Provider, sizeof(DBKey_Crypto_Provider) }, value = { pProv->pszName, mir_strlen(pProv->pszName) + 1 };
-		if (mdbx_put(trnlck, m_dbCrypto, &key, &value, 0) != MDBX_SUCCESS)
+		if (mdbx_put(trnlck, m_dbCrypto, &key, &value, MDBX_UPSERT) != MDBX_SUCCESS)
 			return nullptr;
 
 		key.iov_len = sizeof(DBKey_Crypto_IsEncrypted); key.iov_base = DBKey_Crypto_IsEncrypted; value.iov_len = sizeof(bool); value.iov_base = &bTotalCrypt;
-		if (mdbx_put(trnlck, m_dbCrypto, &key, &value, 0) != MDBX_SUCCESS)
+		if (mdbx_put(trnlck, m_dbCrypto, &key, &value, MDBX_UPSERT) != MDBX_SUCCESS)
 			return nullptr;
 
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return nullptr;
 	}
 
@@ -122,15 +122,16 @@ CRYPTO_PROVIDER* CDbxMDBX::SelectProvider()
 
 class CEnterPasswordDialog : public CDlgBase
 {
+	friend class CDbxMDBX;
+
 	CTimer m_timer;
 	CCtrlData m_header;
 	CCtrlData m_language;
 	CCtrlEdit m_passwordEdit;
 
-	friend class CDbxMDBX;
+	int m_wrongPass = 0;
+	wchar_t m_newPass[100];
 	CDbxMDBX *m_db;
-	TCHAR m_newPass[100];
-	unsigned short m_wrongPass = 0;
 
 	void OnTimer(CTimer*)
 	{
@@ -273,9 +274,9 @@ void CDbxMDBX::StoreKey()
 	{
 		txn_ptr trnlck(StartTran());
 		MDBX_val key = { DBKey_Crypto_Key, sizeof(DBKey_Crypto_Key) }, value = { pKey, iKeyLength };
-		int rc = mdbx_put(trnlck, m_dbCrypto, &key, &value, 0);
+		int rc = mdbx_put(trnlck, m_dbCrypto, &key, &value, MDBX_UPSERT);
 		if (rc == MDBX_SUCCESS)
-			rc = trnlck.commit();
+			rc = trnlck.Commit();
 		/* FIXME: throw an exception */
 		assert(rc == MDBX_SUCCESS);
 		UNREFERENCED_PARAMETER(rc);
@@ -364,22 +365,22 @@ int CDbxMDBX::EnableEncryption(bool bEncrypted)
 				pNewDBEvent->flags = dwNewFlags;
 				memcpy(pNewDBEvent + 1, pNewBlob, nNewBlob);
 
-				if (mdbx_put(trnlck, m_dbEvents, &key, &data, 0) != MDBX_SUCCESS)
+				if (mdbx_put(trnlck, m_dbEvents, &key, &data, MDBX_UPSERT) != MDBX_SUCCESS)
 					return 1;
 			}
 		}
 
 		lstEvents.erase(lstEvents.begin(), lstEvents.begin()+portion);
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 	}
 		while (lstEvents.size() > 0);
 
 	txn_ptr trnlck(StartTran());
 	MDBX_val key = { DBKey_Crypto_IsEncrypted, sizeof(DBKey_Crypto_IsEncrypted) }, value = { &bEncrypted, sizeof(bool) };
-	if (mdbx_put(trnlck, m_dbCrypto, &key, &value, 0) != MDBX_SUCCESS)
+	if (mdbx_put(trnlck, m_dbCrypto, &key, &value, MDBX_UPSERT) != MDBX_SUCCESS)
 		return 1;
-	if (trnlck.commit() != MDBX_SUCCESS)
+	if (trnlck.Commit() != MDBX_SUCCESS)
 		return 1;
 
 	DBFlush();

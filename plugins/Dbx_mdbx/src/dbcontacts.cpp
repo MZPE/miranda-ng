@@ -61,7 +61,7 @@ LONG CDbxMDBX::DeleteContact(MCONTACT contactID)
 			if (pKey->hContact != contactID)
 				break;
 
-			if (mdbx_cursor_del(cursor, 0) != MDBX_SUCCESS)
+			if (mdbx_cursor_del(cursor, MDBX_UPSERT) != MDBX_SUCCESS)
 				return 1;
 
 			if (!cc->IsMeta() && !cc->IsSub()) {
@@ -70,7 +70,7 @@ LONG CDbxMDBX::DeleteContact(MCONTACT contactID)
 			}
 		}
 
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 	}
 
@@ -88,11 +88,11 @@ LONG CDbxMDBX::DeleteContact(MCONTACT contactID)
 			if (pKey->hContact != contactID)
 				break;
 
-			if (mdbx_cursor_del(cursor, 0) != MDBX_SUCCESS)
+			if (mdbx_cursor_del(cursor, MDBX_UPSERT) != MDBX_SUCCESS)
 				return 1;
 		}
 
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 	}
 
@@ -103,7 +103,7 @@ LONG CDbxMDBX::DeleteContact(MCONTACT contactID)
 		txn_ptr trnlck(StartTran());
 		if (mdbx_del(trnlck, m_dbContacts, &key, nullptr) != MDBX_SUCCESS)
 			return 1;
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 	}
 
@@ -123,9 +123,9 @@ MCONTACT CDbxMDBX::AddContact()
 		MDBX_val data = { &cc->dbc, sizeof(cc->dbc) };
 
 		txn_ptr trnlck(StartTran());
-		if (mdbx_put(trnlck, m_dbContacts, &key, &data, 0) != MDBX_SUCCESS)
+		if (mdbx_put(trnlck, m_dbContacts, &key, &data, MDBX_UPSERT) != MDBX_SUCCESS)
 			return 0;
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 0;
 	}
 
@@ -170,10 +170,10 @@ BOOL CDbxMDBX::MetaMergeHistory(DBCachedContact *ccMeta, DBCachedContact *ccSub)
 
 		DBEventSortingKey insVal = { ccMeta->contactID, EI->eventId, EI->ts };
 		MDBX_val key = { &insVal, sizeof(insVal) }, data = { (void*)"", 1 };
-		if (mdbx_put(trnlck, m_dbEventsSort, &key, &data, 0) != MDBX_SUCCESS)
+		if (mdbx_put(trnlck, m_dbEventsSort, &key, &data, MDBX_UPSERT) != MDBX_SUCCESS)
 			return 1;
 
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 
 		ccMeta->dbc.dwEventCount++;
@@ -181,9 +181,9 @@ BOOL CDbxMDBX::MetaMergeHistory(DBCachedContact *ccMeta, DBCachedContact *ccSub)
 
 	MDBX_val keyc = { &ccMeta->contactID, sizeof(MCONTACT) }, datac = { &ccMeta->dbc, sizeof(ccMeta->dbc) };
 	txn_ptr trnlck(StartTran());
-	if (mdbx_put(trnlck, m_dbContacts, &keyc, &datac, 0) != MDBX_SUCCESS)
+	if (mdbx_put(trnlck, m_dbContacts, &keyc, &datac, MDBX_UPSERT) != MDBX_SUCCESS)
 		return 1;
-	if (trnlck.commit() != MDBX_SUCCESS)
+	if (trnlck.Commit() != MDBX_SUCCESS)
 		return 1;
 
 	DBFlush();
@@ -203,7 +203,7 @@ BOOL CDbxMDBX::MetaSplitHistory(DBCachedContact *ccMeta, DBCachedContact *ccSub)
 		MDBX_val key = { &insVal, sizeof(insVal) };
 		if (mdbx_del(trnlck, m_dbEventsSort, &key, nullptr) != MDBX_SUCCESS)
 			return 1;
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 
 		ccMeta->dbc.dwEventCount--;
@@ -211,9 +211,9 @@ BOOL CDbxMDBX::MetaSplitHistory(DBCachedContact *ccMeta, DBCachedContact *ccSub)
 
 	txn_ptr trnlck(StartTran());
 	MDBX_val keyc = { &ccMeta->contactID, sizeof(MCONTACT) }, datac = { &ccMeta->dbc, sizeof(ccMeta->dbc) };
-	if (mdbx_put(trnlck, m_dbContacts, &keyc, &datac, 0) != MDBX_SUCCESS)
+	if (mdbx_put(trnlck, m_dbContacts, &keyc, &datac, MDBX_UPSERT) != MDBX_SUCCESS)
 		return 1;
-	if (trnlck.commit() != MDBX_SUCCESS)
+	if (trnlck.Commit() != MDBX_SUCCESS)
 		return 1;
 	
 	DBFlush();
@@ -234,7 +234,7 @@ BOOL CDbxMDBX::MetaRemoveSubHistory(DBCachedContact *ccSub)
 			if (mdbx_get(trnlck, m_dbEvents, &key, &data) == MDBX_SUCCESS) {
 				DBEvent *pEvent = (DBEvent*)data.iov_base;
 				pEvent->dwContactID = ccSub->parentID;
-				if (mdbx_put(trnlck, m_dbEvents, &key, &data, 0) != MDBX_SUCCESS)
+				if (mdbx_put(trnlck, m_dbEvents, &key, &data, MDBX_UPSERT) != MDBX_SUCCESS)
 					return 1;
 			}
 		}
@@ -246,7 +246,7 @@ BOOL CDbxMDBX::MetaRemoveSubHistory(DBCachedContact *ccSub)
 				return 1;
 		}
 		
-		if (trnlck.commit() != MDBX_SUCCESS)
+		if (trnlck.Commit() != MDBX_SUCCESS)
 			return 1;
 	}
 
